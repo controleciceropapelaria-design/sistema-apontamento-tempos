@@ -39,7 +39,7 @@ def github_api_request(method, endpoint, data=None, debug=False):
     """Faz requisição para GitHub API"""
     if not GITHUB_TOKEN:
         if debug:
-            st.error("Token do GitHub não configurado. Usando modo offline.")
+            st.error("Token do GitHub não configurado. Configure GITHUB_TOKEN nos secrets do Streamlit Cloud.")
         return None
     
     headers = get_github_headers()
@@ -159,7 +159,7 @@ def salvar_os_github(df, sha):
             else:
                 st.error("ERRO: Erro ao salvar no GitHub - mantido backup local")
     else:
-        st.warning("GitHub Token não configurado - salvo apenas localmente")
+        st.warning("GitHub Token não configurado - Configure GITHUB_TOKEN nos secrets do Streamlit Cloud")
     
     return False
 
@@ -189,7 +189,7 @@ def salvar_tempos_github(df, sha):
                 # Falha silenciosa - mantém backup local
                 pass
     else:
-        st.warning("GitHub Token não configurado - salvo apenas localmente")
+        st.warning("GitHub Token não configurado - Configure GITHUB_TOKEN nos secrets do Streamlit Cloud")
     
     return False
 
@@ -308,16 +308,6 @@ st.title("Sistema de Apontamento de Tempos de Produção")
 
 # Sidebar para navegação
 st.sidebar.title("Navegação")
-
-# Configuração do token GitHub
-st.sidebar.markdown("### Configuração GitHub")
-token_input = st.sidebar.text_input("Token GitHub:", 
-                                   value=GITHUB_TOKEN, 
-                                   type="password",
-                                   help="Cole aqui seu token do GitHub (ghp_xxxx ou github_pat_xxxx)")
-if token_input and token_input != GITHUB_TOKEN:
-    GITHUB_TOKEN = token_input
-    st.sidebar.success("✅ Token atualizado!")
 
 opcao = st.sidebar.selectbox("Escolha uma opção:", 
     ["Controle de Tempos", "Gerenciar Ordens de Serviço", "Relatórios", "Configurações Avançadas"])
@@ -588,7 +578,7 @@ elif opcao == "🔧 Debug GitHub":
             st.info(f"🔗 Conectado ao GitHub")
             st.caption(f"📍 {GITHUB_REPO}")
         else:
-            st.warning("GitHub não configurado")
+            st.warning("GitHub Token não configurado - Configure GITHUB_TOKEN nos secrets")
             st.caption("Configure o token na barra lateral")
         
         st.markdown(f"**Dados locais:**")
