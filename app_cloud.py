@@ -18,10 +18,11 @@ GITHUB_TOKEN = st.secrets.get("GITHUB_TOKEN", "")  # Token será configurado nos
 GITHUB_REPO = "controleciceropapelaria-design/sistema-apontamento-tempos"
 GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}"
 
-def github_api_request(method, endpoint, data=None):
+def github_api_request(method, endpoint, data=None, debug=False):
     """Faz requisição para GitHub API"""
     if not GITHUB_TOKEN:
-        st.error("⚠️ Token do GitHub não configurado. Usando modo offline.")
+        if debug:
+            st.error("⚠️ Token do GitHub não configurado. Usando modo offline.")
         return None
     
     headers = {
@@ -37,16 +38,20 @@ def github_api_request(method, endpoint, data=None):
         elif method == "PUT":
             response = requests.put(url, headers=headers, json=data)
         
-        # Log da resposta para debug
-        st.write(f"🔍 Debug API - {method} {endpoint}: Status {response.status_code}")
+        # Log da resposta só no debug
+        if debug:
+            st.write(f"🔍 API {method} {endpoint}: Status {response.status_code}")
         
         if response.status_code in [200, 201]:
             return response.json()
         else:
-            st.error(f"❌ GitHub API Error {response.status_code}: {response.text}")
+            if debug:
+                st.error(f"❌ GitHub API Error {response.status_code}")
+                st.code(response.text)
             return None
     except Exception as e:
-        st.error(f"❌ Erro de conexão GitHub: {str(e)}")
+        if debug:
+            st.error(f"❌ Erro de conexão GitHub: {str(e)}")
         return None
 
 def get_file_from_github(filename):
@@ -281,31 +286,65 @@ else:
 # Sidebar para navegação
 st.sidebar.title("🧭 Navegação")
 opcao = st.sidebar.selectbox("Escolha uma opção:", 
-    ["🏠 Controle de Tempos", "📋 Gerenciar Ordens de Serviço", "📊 Relatórios"])
+    ["🏠 Controle de Tempos", "📋 Gerenciar Ordens de Serviço", "📊 Relatórios", "🔧 Debug GitHub"])
 
-# Botão de teste de sincronização
+# Seção de debug na sidebar
 st.sidebar.markdown("---")
-st.sidebar.markdown("🔧 **Debug & Testes**")
-if st.sidebar.button("🔄 Testar Sincronização"):
-    if GITHUB_TOKEN:
-        st.sidebar.info("Testando GitHub API...")
+st.sidebar.markdown("🔧 **Debug & Diagnóstico**")
+
+# Mostrar status do token
+if GITHUB_TOKEN:
+    st.sidebar.success(f"✅ Token: ...{GITHUB_TOKEN[-4:]}")
+else:
+    st.sidebar.error("❌ Token não encontrado")
+
+# Botão de teste manual
+if st.sidebar.button("🔄 Teste Completo GitHub"):
+    with st.sidebar:
+        st.write("### 🔍 Testando GitHub API")
         
-        # Testa leitura
-        content, sha = get_file_from_github("ordens_servico.csv")
-        if content:
-            st.sidebar.success("✅ Leitura OK")
+        if not GITHUB_TOKEN:
+            st.error("❌ Token não configurado!")
         else:
-            st.sidebar.error("❌ Erro na leitura")
-        
-        # Testa escrita (arquivo de teste)
-        test_content = f"teste,{datetime.now().isoformat()}\n"
-        result = update_file_to_github("teste_sync.txt", test_content, None, "Teste de sincronização")
-        if result:
-            st.sidebar.success("✅ Escrita OK")
-        else:
-            st.sidebar.error("❌ Erro na escrita")
-    else:
-        st.sidebar.warning("⚠️ Token não configurado")
+            st.info("1️⃣ Testando acesso ao repositório...")
+            
+            # Teste 1: Acesso ao repo
+            repo_info = github_api_request("GET", "", debug=True)
+            if repo_info:
+                st.success(f"✅ Repo OK: {repo_info.get('name', 'N/A')}")
+            else:
+                st.error("❌ Erro no acesso ao repositório")
+                
+            st.info("2️⃣ Testando leitura de arquivo...")
+            
+            # Teste 2: Leitura
+            content, sha = get_file_from_github("ordens_servico.csv")
+            if content is not None:
+                st.success(f"✅ Leitura OK (SHA: {sha[:8] if sha else 'N/A'})")
+                st.text(f"Conteúdo: {len(content)} chars")
+            else:
+                st.error("❌ Erro na leitura do arquivo")
+                
+            st.info("3️⃣ Testando escrita...")
+            
+            # Teste 3: Escrita
+            test_content = f"teste_debug,{datetime.now().isoformat()}\n"
+            with st.expander("🔍 Detalhes da Escrita"):
+                result = github_api_request("PUT", "contents/debug_test.txt", {
+                    "message": "Debug test", 
+                    "content": base64.b64encode(test_content.encode()).decode()
+                }, debug=True)
+                
+            if result:
+                st.success("✅ Escrita funcionando!")
+                st.json({"commit_sha": result.get("commit", {}).get("sha", "N/A")[:8]})
+            else:
+                st.error("❌ Erro na escrita")
+
+# Status detalhado dos dados
+st.sidebar.markdown("### 📊 Status dos Dados")
+st.sidebar.write(f"📋 OS Locais: {len(st.session_state.df_os)}")
+st.sidebar.write(f"⏱️ Tempos Locais: {len(st.session_state.df_tempos)}")
 
 if opcao == "📋 Gerenciar Ordens de Serviço":
     st.header("📋 Gerenciar Ordens de Serviço")
@@ -542,6 +581,115 @@ elif opcao == "📊 Relatórios":
                 st.info("📝 Nenhum tempo registrado para esta OS ainda.")
     else:
         st.info("📝 Nenhum tempo registrado ainda.")
+
+elif opcao == "🔧 Debug GitHub":
+    st.header("🔧 Diagnóstico GitHub API")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("📊 Status Atual")
+        
+        if GITHUB_TOKEN:
+            st.success(f"✅ Token configurado: ...{GITHUB_TOKEN[-6:]}")
+            st.info(f"📍 Repositório: {GITHUB_REPO}")
+        else:
+            st.error("❌ Token não configurado")
+            st.markdown("""
+            **Para configurar:**
+            1. Vá em Settings → Secrets
+            2. Adicione: `GITHUB_TOKEN = "seu_token_aqui"`
+            """)
+        
+        st.markdown(f"**Dados locais:**")
+        st.write(f"📋 OS: {len(st.session_state.df_os)} registros")
+        st.write(f"⏱️ Tempos: {len(st.session_state.df_tempos)} registros")
+    
+    with col2:
+        st.subheader("🧪 Teste Completo")
+        
+        if st.button("🚀 Executar Diagnóstico Completo", key="debug_main"):
+            if not GITHUB_TOKEN:
+                st.error("❌ Configure o token primeiro!")
+            else:
+                with st.container():
+                    # Teste 1: Repositório
+                    st.write("**1️⃣ Testando acesso ao repositório...**")
+                    repo_info = github_api_request("GET", "", debug=False)
+                    if repo_info:
+                        st.success(f"✅ Conectado: {repo_info.get('full_name')}")
+                        st.info(f"📅 Último update: {repo_info.get('updated_at')}")
+                    else:
+                        st.error("❌ Erro no acesso ao repositório")
+                        st.stop()
+                    
+                    # Teste 2: Leitura
+                    st.write("**2️⃣ Testando leitura de arquivos...**")
+                    content_os, sha_os = get_file_from_github("ordens_servico.csv")
+                    content_tempos, sha_tempos = get_file_from_github("tempos_processos.csv")
+                    
+                    if content_os is not None:
+                        st.success(f"✅ ordens_servico.csv: {len(content_os)} chars (SHA: {sha_os[:8] if sha_os else 'N/A'})")
+                    else:
+                        st.warning("⚠️ ordens_servico.csv não encontrado")
+                    
+                    if content_tempos is not None:
+                        st.success(f"✅ tempos_processos.csv: {len(content_tempos)} chars (SHA: {sha_tempos[:8] if sha_tempos else 'N/A'})")
+                    else:
+                        st.warning("⚠️ tempos_processos.csv não encontrado")
+                    
+                    # Teste 3: Escrita
+                    st.write("**3️⃣ Testando escrita...**")
+                    test_content = f"debug_test,{datetime.now().isoformat()},OK\n"
+                    
+                    encoded_content = base64.b64encode(test_content.encode()).decode()
+                    test_data = {
+                        "message": f"Debug test - {datetime.now().strftime('%H:%M:%S')}",
+                        "content": encoded_content
+                    }
+                    
+                    result = github_api_request("PUT", "contents/debug_sync_test.csv", test_data, debug=False)
+                    if result:
+                        st.success("✅ Escrita funcionando perfeitamente!")
+                        commit_sha = result.get("commit", {}).get("sha", "N/A")
+                        st.info(f"📝 Commit criado: {commit_sha[:8]}")
+                    else:
+                        st.error("❌ Erro na escrita - verifique permissões do token")
+                    
+                    # Teste 4: Simulação de OS
+                    st.write("**4️⃣ Testando fluxo completo de OS...**")
+                    
+                    test_os = pd.DataFrame([{
+                        'numero_os': 9999,
+                        'produto': 'TESTE DEBUG',
+                        'quantidade': 1,
+                        'data_criacao': datetime.now().isoformat(),
+                        'status_os': 'ativa'
+                    }])
+                    
+                    csv_content = test_os.to_csv(index=False)
+                    encoded_csv = base64.b64encode(csv_content.encode()).decode()
+                    
+                    os_data = {
+                        "message": f"Teste OS completo - {datetime.now().strftime('%H:%M:%S')}",
+                        "content": encoded_csv
+                    }
+                    
+                    os_result = github_api_request("PUT", "contents/teste_os_debug.csv", os_data, debug=False)
+                    if os_result:
+                        st.success("✅ Simulação de OS funcionando!")
+                        st.balloons()
+                    else:
+                        st.error("❌ Problema no fluxo de OS")
+    
+    # Logs em tempo real
+    st.subheader("📋 Arquivos no GitHub")
+    if st.button("🔍 Listar Arquivos"):
+        files_info = github_api_request("GET", "contents/")
+        if files_info:
+            for file in files_info:
+                if file['name'].endswith('.csv'):
+                    st.write(f"📄 {file['name']} - {file['size']} bytes")
 
 # Rodapé
 st.sidebar.markdown("---")
