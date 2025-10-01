@@ -1,1 +1,2 @@
-numero_os,produto,quantidade,data_criacao
+numero_os,produto,quantidade,data_criacao,status_os
+TEST-001,Teste,1,2025-10-01T12:45:53.459076,ativa
