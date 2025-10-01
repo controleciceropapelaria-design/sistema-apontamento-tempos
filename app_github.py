@@ -3,6 +3,7 @@ import pandas as pd
 import os
 from datetime import datetime
 import time
+import subprocess
 
 # Configuracao da pagina
 st.set_page_config(
@@ -54,7 +55,7 @@ def carregar_os():
         # Adicionar coluna status_os se nao existir (compatibilidade)
         if 'status_os' not in df.columns:
             df['status_os'] = 'ativa'
-            salvar_os(df)
+            salvar_os(df)  # Retorno ignorado para compatibilidade
         return df
     except:
         return pd.DataFrame(columns=['numero_os', 'produto', 'quantidade', 'data_criacao', 'status_os'])
@@ -72,10 +73,57 @@ def carregar_tempos():
 def salvar_os(df):
     """Salva as ordens de servico no CSV"""
     df.to_csv(OS_FILE, index=False)
+    # Tenta commit para GitHub (funciona apenas localmente)
+    commit_sucesso = commit_to_github(f"Atualizado ordens de servico - {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    return commit_sucesso
 
 def salvar_tempos(df):
     """Salva os tempos dos processos no CSV"""
     df.to_csv(TEMPOS_FILE, index=False)
+    # Tenta commit para GitHub (funciona apenas localmente)
+    commit_sucesso = commit_to_github(f"Atualizado tempos de processos - {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    return commit_sucesso
+
+def commit_to_github(mensagem):
+    """Faz commit automatico dos arquivos CSV para o GitHub"""
+    # Verifica se estamos em ambiente local com Git configurado
+    is_cloud = os.getenv('STREAMLIT_SHARING_MODE') or 'streamlit.app' in os.getenv('HOSTNAME', '')
+    
+    if is_cloud:
+        return False  # Nao tenta commit no Streamlit Cloud
+    
+    try:
+        # Verificar se git esta disponivel
+        subprocess.run(['git', '--version'], 
+                      capture_output=True, text=True, check=True)
+        
+        # Verificar se estamos em um repositorio git
+        subprocess.run(['git', 'status'], 
+                      capture_output=True, text=True, check=True)
+        
+        # Adicionar arquivos ao git
+        subprocess.run(['git', 'add', OS_FILE, TEMPOS_FILE], 
+                      capture_output=True, text=True, cwd='.')
+        
+        # Verificar se ha mudancas para commit
+        result = subprocess.run(['git', 'diff', '--cached', '--quiet'], 
+                               capture_output=True, text=True, cwd='.')
+        
+        # Se ha mudancas (return code != 0), fazer commit
+        if result.returncode != 0:
+            commit_result = subprocess.run(['git', 'commit', '-m', mensagem], 
+                                          capture_output=True, text=True, cwd='.')
+            
+            # Push para GitHub se commit foi bem-sucedido
+            if commit_result.returncode == 0:
+                push_result = subprocess.run(['git', 'push'], 
+                                           capture_output=True, text=True, cwd='.')
+                return push_result.returncode == 0
+                
+    except Exception as e:
+        # Em caso de erro, continua sem commit
+        pass
+    return False
 
 def criar_os(numero_os, produto, quantidade):
     """Cria uma nova ordem de servico"""
@@ -93,7 +141,7 @@ def criar_os(numero_os, produto, quantidade):
         'status_os': ['ativa']
     })
     df_os = pd.concat([df_os, nova_os], ignore_index=True)
-    salvar_os(df_os)
+    commit_os_sucesso = salvar_os(df_os)
     
     # Criar processos para a OS
     df_tempos = carregar_tempos()
@@ -108,8 +156,17 @@ def criar_os(numero_os, produto, quantidade):
         })
         df_tempos = pd.concat([df_tempos, novo_tempo], ignore_index=True)
     
-    salvar_tempos(df_tempos)
-    return True, "OS cadastrada com sucesso!"
+    commit_tempos_sucesso = salvar_tempos(df_tempos)
+    
+    # Mensagem de sucesso com informacao sobre GitHub
+    mensagem = "OS cadastrada com sucesso!"
+    if not (os.getenv('STREAMLIT_SHARING_MODE') or 'streamlit.app' in os.getenv('HOSTNAME', '')):
+        if commit_os_sucesso and commit_tempos_sucesso:
+            mensagem += " ✅ Dados salvos no GitHub automaticamente."
+        else:
+            mensagem += " 💾 Dados salvos localmente."
+    
+    return True, mensagem
 
 def excluir_os(numero_os):
     """Exclui uma ordem de servico e todos seus tempos"""
@@ -239,8 +296,14 @@ inicializar_csvs()
 st.title("Sistema de Apontamento de Tempos de Producao")
 st.sidebar.title("Menu")
 
-# Adicionar informacao sobre GitHub
-st.sidebar.info("💾 Dados salvos em CSV para GitHub")
+# Verificar se estamos no Streamlit Cloud
+is_cloud = os.getenv('STREAMLIT_SHARING_MODE') or 'streamlit.app' in os.getenv('HOSTNAME', '')
+
+# Informacoes sobre persistencia
+if is_cloud:
+    st.sidebar.warning("🌐 Modo Cloud: Use 'Download CSV' para salvar dados localmente")
+else:
+    st.sidebar.info("💾 Dados salvos em CSV + GitHub automatico")
 
 pagina = st.sidebar.selectbox("Escolha:", ["Cadastro de OS", "Apontamento", "Relatorios", "Dados"])
 
@@ -479,7 +542,24 @@ elif pagina == "Relatorios":
 elif pagina == "Dados":
     st.header("Visualizacao dos Dados CSV")
     
-    tab1, tab2 = st.tabs(["Ordens de Servico", "Tempos dos Processos"])
+    # Informacao sobre persistencia
+    if is_cloud:
+        st.info("🌐 **Modo Streamlit Cloud:** Os dados sao temporarios. Use os botoes de download para salvar localmente.")
+    else:
+        st.success("💻 **Modo Local:** Os dados sao salvos automaticamente no GitHub quando possivel.")
+    
+    # Botao para sincronizar com GitHub (apenas local)
+    if not is_cloud:
+        if st.button("🔄 Sincronizar com GitHub", help="Força commit dos CSVs para o GitHub"):
+            sucesso = commit_to_github("Sincronizacao manual de dados CSV")
+            if sucesso:
+                st.success("✅ Dados sincronizados com GitHub!")
+            else:
+                st.warning("⚠️ Nao foi possivel sincronizar. Verifique configuracao do Git.")
+    
+    st.divider()
+    
+    tab1, tab2, tab3 = st.tabs(["Ordens de Servico", "Tempos dos Processos", "Backup & Restore"])
     
     with tab1:
         st.subheader("ordens_servico.csv")
@@ -490,7 +570,7 @@ elif pagina == "Dados":
             # Download CSV
             csv_os = df_os.to_csv(index=False)
             st.download_button(
-                label="Download CSV Ordens",
+                label="📥 Download CSV Ordens",
                 data=csv_os,
                 file_name="ordens_servico.csv",
                 mime="text/csv"
@@ -507,13 +587,47 @@ elif pagina == "Dados":
             # Download CSV
             csv_tempos = df_tempos.to_csv(index=False)
             st.download_button(
-                label="Download CSV Tempos",
+                label="📥 Download CSV Tempos",
                 data=csv_tempos,
                 file_name="tempos_processos.csv",
                 mime="text/csv"
             )
         else:
             st.info("Nenhum tempo registrado")
+    
+    with tab3:
+        st.subheader("Backup e Restauracao")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.write("**📤 Fazer Backup**")
+            if st.button("📦 Download Backup Completo"):
+                df_os = carregar_os()
+                df_tempos = carregar_tempos()
+                
+                # Criar um backup em formato JSON para facilitar
+                backup_data = {
+                    "ordens_servico": df_os.to_dict('records'),
+                    "tempos_processos": df_tempos.to_dict('records'),
+                    "data_backup": datetime.now().isoformat(),
+                    "versao_sistema": "2.0"
+                }
+                
+                import json
+                backup_json = json.dumps(backup_data, ensure_ascii=False, indent=2)
+                
+                st.download_button(
+                    label="💾 Baixar Backup JSON",
+                    data=backup_json,
+                    file_name=f"backup_sistema_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    mime="application/json"
+                )
+        
+        with col2:
+            st.write("**📥 Restaurar Backup**")
+            st.info("⚠️ Funcionalidade de restore sera implementada em versoes futuras.")
+            st.write("Por enquanto, use os CSVs individuais para restaurar dados.")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("**Sistema v2.0 - GitHub Ready**")
