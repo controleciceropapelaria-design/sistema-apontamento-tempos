@@ -20,67 +20,40 @@ GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}"
 
 def github_api_request(method, endpoint, data=None, debug=False):
     """Faz requisição para GitHub API"""
-    if not GITHUB                with st.container():
-                    # Teste 0: Verificar usuário do token
-                    st.write("**0️⃣ Verificando usuário do token...**")
-                    user_response = requests.get("https://api.github.com/user", 
-                                                headers={"Authorization": f"token {GITHUB_TOKEN}"})
-                    
-                    if user_response.status_code == 200:
-                        user_data = user_response.json()
-                        st.success(f"✅ Token válido para: **{user_data.get('login', 'N/A')}**")
-                        st.info(f"📧 Email: {user_data.get('email', 'N/A')}")
-                        st.info(f"🔗 Perfil: {user_data.get('html_url', 'N/A')}")
-                    else:
-                        st.error(f"❌ Token inválido: Status {user_response.status_code}")
-                        st.code(user_response.text)
-                        st.stop()
-                    
-                    # Teste 1: Listar repositórios do usuário
+    if not GITHUB_                    # Teste 1: Listar repositórios disponíveis PRIMEIRO
                     st.write("**1️⃣ Listando repositórios disponíveis...**")
                     repos_response = requests.get("https://api.github.com/user/repos", 
                                                 headers={"Authorization": f"token {GITHUB_TOKEN}"})
-                    
                     if repos_response.status_code == 200:
                         repos = repos_response.json()
-                        st.info(f"📋 Encontrados **{len(repos)}** repositórios:")
+                        st.success(f"✅ Token tem acesso a {len(repos)} repositórios")
                         
-                        # Mostra todos os repositórios
-                        repo_names = []
+                        st.write("**📋 Repositórios encontrados:**")
                         for repo in repos:
-                            repo_names.append(repo['full_name'])
-                            if len(repo_names) <= 15:  # Mostra os primeiros 15
-                                st.write(f"• **{repo['full_name']}** ({repo['private'] and 'privado' or 'público'})")
+                            st.write(f"• `{repo['full_name']}` ({'privado' if repo['private'] else 'público'})")
                         
-                        # Verifica se o repositório esperado existe
-                        expected_repo = GITHUB_REPO
-                        if expected_repo in repo_names:
-                            st.success(f"✅ Repositório **{expected_repo}** encontrado!")
+                        # Verifica se nosso repo está na lista
+                        repo_names = [r['full_name'] for r in repos]
+                        if GITHUB_REPO in repo_names:
+                            st.success(f"✅ Repositório '{GITHUB_REPO}' encontrado na lista!")
                         else:
-                            st.error(f"❌ Repositório **{expected_repo}** NÃO encontrado!")
-                            st.warning("🔍 **Possíveis soluções:**")
-                            st.write("1. Verifique se você tem acesso ao repositório")
-                            st.write("2. Confirme se o token foi criado para a conta correta")
-                            st.write("3. Se for repositório de organização, adicione acesso à organização")
-                            
-                            # Sugere repositórios similares
-                            similar = [r for r in repo_names if 'sistema' in r.lower() or 'apontamento' in r.lower()]
-                            if similar:
-                                st.write("**Repositórios similares encontrados:**")
-                                for sim in similar:
-                                    st.write(f"• {sim}")
+                            st.error(f"❌ Repositório '{GITHUB_REPO}' NÃO encontrado!")
+                            st.write("**💡 Soluções possíveis:**")
+                            st.write("1. Verifique se o token foi criado para a conta correta")
+                            st.write("2. O repositório pode estar em outra organização")
+                            st.write("3. Token precisa de acesso ao repositório específico")
                     else:
                         st.error(f"❌ Erro ao listar repositórios: {repos_response.status_code}")
                         st.code(repos_response.text)
                     
-                    # Teste 2: Tentar acessar o repositório específico
-                    st.write("**2️⃣ Testando acesso ao repositório específico...**")
+                    # Teste 2: Acesso direto ao repositório
+                    st.write("**2️⃣ Testando acesso direto ao repositório...**")
                     repo_info = github_api_request("GET", "", debug=True)
                     if repo_info:
                         st.success(f"✅ Conectado: {repo_info.get('full_name')}")
                         st.info(f"📅 Último update: {repo_info.get('updated_at')}")
                     else:
-                        st.error("❌ Erro no acesso ao repositório específico")       if debug:
+                        st.error("❌ Erro no acesso ao repositório")        if debug:
             st.error("⚠️ Token do GitHub não configurado. Usando modo offline.")
         return None
     
