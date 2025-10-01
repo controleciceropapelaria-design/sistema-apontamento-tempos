@@ -37,13 +37,16 @@ def github_api_request(method, endpoint, data=None):
         elif method == "PUT":
             response = requests.put(url, headers=headers, json=data)
         
+        # Log da resposta para debug
+        st.write(f"🔍 Debug API - {method} {endpoint}: Status {response.status_code}")
+        
         if response.status_code in [200, 201]:
             return response.json()
         else:
-            st.error(f"Erro GitHub API: {response.status_code}")
+            st.error(f"❌ GitHub API Error {response.status_code}: {response.text}")
             return None
     except Exception as e:
-        st.error(f"Erro de conexão: {e}")
+        st.error(f"❌ Erro de conexão GitHub: {str(e)}")
         return None
 
 def get_file_from_github(filename):
@@ -60,9 +63,12 @@ def update_file_to_github(filename, content, sha, commit_message):
     
     data = {
         "message": commit_message,
-        "content": encoded_content,
-        "sha": sha
+        "content": encoded_content
     }
+    
+    # Só adiciona SHA se existir (para arquivos existentes)
+    if sha:
+        data["sha"] = sha
     
     return github_api_request("PUT", f"contents/{filename}", data)
 
@@ -109,15 +115,21 @@ def salvar_os_github(df, sha):
     content = df.to_csv(index=False)
     commit_msg = f"OS atualizada - {datetime.now().strftime('%d/%m/%Y %H:%M')}"
     
+    # Sempre salva local primeiro como backup
+    df.to_csv("ordens_servico.csv", index=False)
+    
     if GITHUB_TOKEN:
+        st.info(f"🔄 Salvando OS no GitHub... (SHA: {sha[:8] if sha else 'novo'})")
         result = update_file_to_github("ordens_servico.csv", content, sha, commit_msg)
         if result:
             st.success("✅ OS salva no GitHub com sucesso!")
+            st.json({"commit": result.get("commit", {}).get("sha", "N/A")[:8]})
             return True
+        else:
+            st.error("❌ Erro ao salvar no GitHub - mantido backup local")
+    else:
+        st.warning("⚠️ GitHub Token não configurado - salvo apenas localmente")
     
-    # Fallback local
-    df.to_csv("ordens_servico.csv", index=False)
-    st.warning("⚠️ Salvo apenas localmente")
     return False
 
 def salvar_tempos_github(df, sha):
@@ -125,15 +137,20 @@ def salvar_tempos_github(df, sha):
     content = df.to_csv(index=False)
     commit_msg = f"Tempos atualizados - {datetime.now().strftime('%d/%m/%Y %H:%M')}"
     
+    # Sempre salva local primeiro como backup
+    df.to_csv("tempos_processos.csv", index=False)
+    
     if GITHUB_TOKEN:
+        st.info(f"🔄 Salvando tempos no GitHub... (SHA: {sha[:8] if sha else 'novo'})")
         result = update_file_to_github("tempos_processos.csv", content, sha, commit_msg)
         if result:
             st.success("✅ Tempos salvos no GitHub!")
             return True
+        else:
+            st.error("❌ Erro ao salvar tempos no GitHub - mantido backup local")
+    else:
+        st.warning("⚠️ GitHub Token não configurado - salvo apenas localmente")
     
-    # Fallback local
-    df.to_csv("tempos_processos.csv", index=False)
-    st.warning("⚠️ Salvo apenas localmente")
     return False
 
 # Inicialização dos dados
@@ -251,7 +268,13 @@ st.title("⏱️ Sistema de Apontamento de Tempos de Produção")
 
 # Status do GitHub
 if GITHUB_TOKEN:
-    st.success("🌐 Conectado ao GitHub - Dados salvos automaticamente")
+    # Teste de conectividade
+    test_response = github_api_request("GET", "")  # Info do repositório
+    if test_response:
+        st.success(f"🌐 Conectado ao GitHub: {test_response.get('full_name', 'N/A')}")
+        st.info(f"📊 Último commit: {test_response.get('updated_at', 'N/A')}")
+    else:
+        st.error("❌ Token configurado mas erro de conexão")
 else:
     st.warning("⚠️ Modo offline - Configure GITHUB_TOKEN nos secrets para sincronizar")
 
@@ -259,6 +282,30 @@ else:
 st.sidebar.title("🧭 Navegação")
 opcao = st.sidebar.selectbox("Escolha uma opção:", 
     ["🏠 Controle de Tempos", "📋 Gerenciar Ordens de Serviço", "📊 Relatórios"])
+
+# Botão de teste de sincronização
+st.sidebar.markdown("---")
+st.sidebar.markdown("🔧 **Debug & Testes**")
+if st.sidebar.button("🔄 Testar Sincronização"):
+    if GITHUB_TOKEN:
+        st.sidebar.info("Testando GitHub API...")
+        
+        # Testa leitura
+        content, sha = get_file_from_github("ordens_servico.csv")
+        if content:
+            st.sidebar.success("✅ Leitura OK")
+        else:
+            st.sidebar.error("❌ Erro na leitura")
+        
+        # Testa escrita (arquivo de teste)
+        test_content = f"teste,{datetime.now().isoformat()}\n"
+        result = update_file_to_github("teste_sync.txt", test_content, None, "Teste de sincronização")
+        if result:
+            st.sidebar.success("✅ Escrita OK")
+        else:
+            st.sidebar.error("❌ Erro na escrita")
+    else:
+        st.sidebar.warning("⚠️ Token não configurado")
 
 if opcao == "📋 Gerenciar Ordens de Serviço":
     st.header("📋 Gerenciar Ordens de Serviço")
