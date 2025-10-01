@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 *.so
 .Python
+
+# Streamlit secrets (contém tokens sensíveis)
+.streamlit/secrets.toml
 build/
 develop-eggs/
 dist/
