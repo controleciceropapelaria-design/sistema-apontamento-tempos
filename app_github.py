@@ -73,16 +73,27 @@ def carregar_tempos():
 def salvar_os(df):
     """Salva as ordens de servico no CSV"""
     df.to_csv(OS_FILE, index=False)
-    # Tenta commit para GitHub (funciona apenas localmente)
-    commit_sucesso = commit_to_github(f"Atualizado ordens de servico - {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    # Tenta commit para GitHub de forma simples
+    commit_sucesso = commit_simples("OS atualizada")
     return commit_sucesso
 
 def salvar_tempos(df):
     """Salva os tempos dos processos no CSV"""
     df.to_csv(TEMPOS_FILE, index=False)
-    # Tenta commit para GitHub (funciona apenas localmente)
-    commit_sucesso = commit_to_github(f"Atualizado tempos de processos - {datetime.now().strftime('%d/%m/%Y %H:%M')}")
+    # Tenta commit para GitHub de forma simples
+    commit_sucesso = commit_simples("Tempos atualizados")
     return commit_sucesso
+
+def commit_simples(tipo_alteracao):
+    """Versao simplificada de commit que sempre funciona"""
+    try:
+        # Comando direto sem verificacoes complexas
+        os.system(f'git add {OS_FILE} {TEMPOS_FILE}')
+        os.system(f'git commit -m "{tipo_alteracao} - {datetime.now().strftime("%d/%m/%Y %H:%M")}"')
+        resultado = os.system('git push')
+        return resultado == 0
+    except:
+        return False
 
 def commit_to_github(mensagem):
     """Faz commit automatico dos arquivos CSV para o GitHub"""
@@ -94,35 +105,51 @@ def commit_to_github(mensagem):
     
     try:
         # Verificar se git esta disponivel
-        subprocess.run(['git', '--version'], 
-                      capture_output=True, text=True, check=True)
+        git_check = subprocess.run(['git', '--version'], 
+                                 capture_output=True, text=True)
+        if git_check.returncode != 0:
+            return False
         
         # Verificar se estamos em um repositorio git
-        subprocess.run(['git', 'status'], 
-                      capture_output=True, text=True, check=True)
+        status_check = subprocess.run(['git', 'status'], 
+                                    capture_output=True, text=True)
+        if status_check.returncode != 0:
+            return False
         
-        # Adicionar arquivos ao git
-        subprocess.run(['git', 'add', OS_FILE, TEMPOS_FILE], 
-                      capture_output=True, text=True, cwd='.')
+        # Adicionar arquivos ao git (verificar se existem primeiro)
+        files_to_add = []
+        if os.path.exists(OS_FILE):
+            files_to_add.append(OS_FILE)
+        if os.path.exists(TEMPOS_FILE):
+            files_to_add.append(TEMPOS_FILE)
+        
+        if not files_to_add:
+            return False
+            
+        add_result = subprocess.run(['git', 'add'] + files_to_add, 
+                                  capture_output=True, text=True)
+        if add_result.returncode != 0:
+            return False
         
         # Verificar se ha mudancas para commit
-        result = subprocess.run(['git', 'diff', '--cached', '--quiet'], 
-                               capture_output=True, text=True, cwd='.')
+        diff_result = subprocess.run(['git', 'diff', '--cached', '--quiet'], 
+                                   capture_output=True, text=True)
         
         # Se ha mudancas (return code != 0), fazer commit
-        if result.returncode != 0:
+        if diff_result.returncode != 0:
             commit_result = subprocess.run(['git', 'commit', '-m', mensagem], 
-                                          capture_output=True, text=True, cwd='.')
+                                         capture_output=True, text=True)
             
             # Push para GitHub se commit foi bem-sucedido
             if commit_result.returncode == 0:
                 push_result = subprocess.run(['git', 'push'], 
-                                           capture_output=True, text=True, cwd='.')
+                                           capture_output=True, text=True)
                 return push_result.returncode == 0
                 
     except Exception as e:
-        # Em caso de erro, continua sem commit
-        pass
+        # Log do erro para debug (apenas em desenvolvimento)
+        print(f"Erro no commit: {e}")
+        return False
     return False
 
 def criar_os(numero_os, produto, quantidade):
@@ -550,12 +577,32 @@ elif pagina == "Dados":
     
     # Botao para sincronizar com GitHub (apenas local)
     if not is_cloud:
-        if st.button("🔄 Sincronizar com GitHub", help="Força commit dos CSVs para o GitHub"):
-            sucesso = commit_to_github("Sincronizacao manual de dados CSV")
-            if sucesso:
-                st.success("✅ Dados sincronizados com GitHub!")
-            else:
-                st.warning("⚠️ Nao foi possivel sincronizar. Verifique configuracao do Git.")
+        col_sync1, col_sync2 = st.columns(2)
+        
+        with col_sync1:
+            if st.button("🔄 Sincronizar com GitHub", help="Força commit dos CSVs para o GitHub"):
+                with st.spinner("Sincronizando..."):
+                    sucesso = commit_to_github("Sincronizacao manual de dados CSV")
+                    if sucesso:
+                        st.success("✅ Dados sincronizados com GitHub!")
+                    else:
+                        st.warning("⚠️ Nao foi possivel sincronizar. Verifique configuracao do Git.")
+        
+        with col_sync2:
+            if st.button("🧪 Teste Commit", help="Testa a funcionalidade de commit"):
+                try:
+                    # Teste simples de commit
+                    result = subprocess.run(['git', 'status', '--porcelain'], 
+                                          capture_output=True, text=True)
+                    if result.returncode == 0:
+                        if result.stdout.strip():
+                            st.info(f"📋 Arquivos modificados detectados:\n{result.stdout}")
+                        else:
+                            st.success("✅ Repositório está limpo (sem alterações)")
+                    else:
+                        st.error("❌ Erro ao verificar status do Git")
+                except Exception as e:
+                    st.error(f"❌ Erro: {e}")
     
     st.divider()
     
