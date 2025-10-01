@@ -24,12 +24,18 @@ PROCESSOS = [
     "Montagem do kit"
 ]
 
+# Status das OS
+STATUS_OS = {
+    "ativa": "🟢 Ativa",
+    "finalizada": "🔒 Finalizada"
+}
+
 def inicializar_csvs():
     """Inicializa os arquivos CSV se nao existirem"""
     # CSV das Ordens de Servico
     if not os.path.exists(OS_FILE):
         df_os = pd.DataFrame(columns=[
-            'numero_os', 'produto', 'quantidade', 'data_criacao'
+            'numero_os', 'produto', 'quantidade', 'data_criacao', 'status_os'
         ])
         df_os.to_csv(OS_FILE, index=False)
     
@@ -44,9 +50,14 @@ def inicializar_csvs():
 def carregar_os():
     """Carrega as ordens de servico do CSV"""
     try:
-        return pd.read_csv(OS_FILE)
+        df = pd.read_csv(OS_FILE)
+        # Adicionar coluna status_os se nao existir (compatibilidade)
+        if 'status_os' not in df.columns:
+            df['status_os'] = 'ativa'
+            salvar_os(df)
+        return df
     except:
-        return pd.DataFrame(columns=['numero_os', 'produto', 'quantidade', 'data_criacao'])
+        return pd.DataFrame(columns=['numero_os', 'produto', 'quantidade', 'data_criacao', 'status_os'])
 
 def carregar_tempos():
     """Carrega os tempos dos processos do CSV"""
@@ -68,13 +79,18 @@ def salvar_tempos(df):
 
 def criar_os(numero_os, produto, quantidade):
     """Cria uma nova ordem de servico"""
-    # Adicionar OS
+    # Verificar se OS ja existe
     df_os = carregar_os()
+    if numero_os in df_os['numero_os'].values:
+        return False, "OS ja existe!"
+    
+    # Adicionar OS
     nova_os = pd.DataFrame({
         'numero_os': [numero_os],
         'produto': [produto],
         'quantidade': [quantidade],
-        'data_criacao': [datetime.now().isoformat()]
+        'data_criacao': [datetime.now().isoformat()],
+        'status_os': ['ativa']
     })
     df_os = pd.concat([df_os, nova_os], ignore_index=True)
     salvar_os(df_os)
@@ -93,6 +109,46 @@ def criar_os(numero_os, produto, quantidade):
         df_tempos = pd.concat([df_tempos, novo_tempo], ignore_index=True)
     
     salvar_tempos(df_tempos)
+    return True, "OS cadastrada com sucesso!"
+
+def excluir_os(numero_os):
+    """Exclui uma ordem de servico e todos seus tempos"""
+    # Remover OS
+    df_os = carregar_os()
+    df_os = df_os[df_os['numero_os'] != numero_os]
+    salvar_os(df_os)
+    
+    # Remover tempos da OS
+    df_tempos = carregar_tempos()
+    df_tempos = df_tempos[df_tempos['numero_os'] != numero_os]
+    salvar_tempos(df_tempos)
+
+def finalizar_os(numero_os):
+    """Finaliza uma OS, impedindo alteracoes nos tempos"""
+    df_os = carregar_os()
+    mask = df_os['numero_os'] == numero_os
+    if mask.any():
+        idx = df_os[mask].index[0]
+        df_os.loc[idx, 'status_os'] = 'finalizada'
+        salvar_os(df_os)
+        
+        # Parar todos os processos em execucao
+        df_tempos = carregar_tempos()
+        os_mask = df_tempos['numero_os'] == numero_os
+        for idx in df_tempos[os_mask].index:
+            if df_tempos.loc[idx, 'status'] == 'rodando':
+                # Atualizar tempo antes de parar
+                if (df_tempos.loc[idx, 'inicio_atual'] and 
+                    df_tempos.loc[idx, 'inicio_atual'] != ''):
+                    inicio = datetime.fromisoformat(df_tempos.loc[idx, 'inicio_atual'])
+                    tempo_decorrido = (datetime.now() - inicio).total_seconds()
+                    df_tempos.loc[idx, 'tempo_total_segundos'] += tempo_decorrido
+                
+                df_tempos.loc[idx, 'status'] = 'finalizado'
+                df_tempos.loc[idx, 'inicio_atual'] = ''
+                df_tempos.loc[idx, 'data_atualizacao'] = datetime.now().isoformat()
+        
+        salvar_tempos(df_tempos)
 
 def atualizar_tempo_processo(numero_os, processo):
     """Atualiza o tempo de um processo"""
@@ -191,6 +247,7 @@ pagina = st.sidebar.selectbox("Escolha:", ["Cadastro de OS", "Apontamento", "Rel
 if pagina == "Cadastro de OS":
     st.header("Cadastro de Ordem de Servico")
     
+    # Formulario de cadastro
     with st.form("cadastro"):
         col1, col2 = st.columns(2)
         
@@ -203,15 +260,43 @@ if pagina == "Cadastro de OS":
         
         if st.form_submit_button("Criar OS"):
             if numero_os and produto:
-                df_os = carregar_os()
-                if numero_os in df_os['numero_os'].values:
-                    st.error("OS ja existe!")
-                else:
-                    criar_os(numero_os, produto, quantidade)
-                    st.success("OS criada!")
+                sucesso, mensagem = criar_os(numero_os, produto, quantidade)
+                if sucesso:
+                    st.success(mensagem)
                     st.rerun()
+                else:
+                    st.error(mensagem)
             else:
-                st.error("Preencha todos os campos!")
+                st.error("Preencha todos os campos obrigatorios!")
+    
+    st.divider()
+    
+    # Lista de OS existentes com opcao de exclusao
+    st.subheader("Ordens de Servico Cadastradas")
+    df_os = carregar_os()
+    
+    if not df_os.empty:
+        for _, os_row in df_os.iterrows():
+            col1, col2, col3, col4, col5 = st.columns([2, 2, 1, 1, 1])
+            
+            with col1:
+                st.write(f"**{os_row['numero_os']}**")
+            with col2:
+                st.write(f"{os_row['produto']} (Qtd: {os_row['quantidade']})")
+            with col3:
+                status_os = os_row.get('status_os', 'ativa')
+                st.write(STATUS_OS.get(status_os, status_os))
+            with col4:
+                data_criacao = datetime.fromisoformat(os_row['data_criacao'])
+                st.write(data_criacao.strftime('%d/%m/%Y'))
+            with col5:
+                if st.button("🗑️ Excluir", key=f"excluir_{os_row['numero_os']}", 
+                           help="Excluir esta OS e todos os tempos"):
+                    excluir_os(os_row['numero_os'])
+                    st.success(f"OS {os_row['numero_os']} excluida!")
+                    st.rerun()
+    else:
+        st.info("Nenhuma OS cadastrada ainda.")
 
 elif pagina == "Apontamento":
     st.header("Apontamento de Tempos")
@@ -222,64 +307,114 @@ elif pagina == "Apontamento":
     if df_os.empty:
         st.warning("Nenhuma OS cadastrada.")
     else:
-        os_selecionada = st.selectbox("Selecione a OS:", df_os['numero_os'].values)
+        # Filtrar apenas OS ativas para selecao
+        os_ativas = df_os[df_os['status_os'] != 'finalizada']
+        os_finalizadas = df_os[df_os['status_os'] == 'finalizada']
         
-        if os_selecionada:
-            # Info da OS
-            os_info = df_os[df_os['numero_os'] == os_selecionada].iloc[0]
+        # Selectbox com todas as OS (ativas primeiro)
+        todas_os = list(os_ativas['numero_os'].values) + list(os_finalizadas['numero_os'].values)
+        
+        if not todas_os:
+            st.warning("Nenhuma OS disponivel.")
+        else:
+            os_selecionada = st.selectbox("Selecione a OS:", todas_os)
             
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.info(f"Produto: {os_info['produto']}")
-            with col2:
-                st.info(f"Quantidade: {os_info['quantidade']}")
-            with col3:
-                data_criacao = datetime.fromisoformat(os_info['data_criacao'])
-                st.info(f"Criada: {data_criacao.strftime('%d/%m/%Y')}")
-            
-            st.divider()
-            
-            # Processos
-            for i, processo in enumerate(PROCESSOS):
-                processo_mask = (df_tempos['numero_os'] == os_selecionada) & (df_tempos['processo'] == processo)
+            if os_selecionada:
+                # Info da OS
+                os_info = df_os[df_os['numero_os'] == os_selecionada].iloc[0]
+                status_os_atual = os_info.get('status_os', 'ativa')
                 
-                if processo_mask.any():
-                    processo_data = df_tempos[processo_mask].iloc[0]
-                    tempo_atual = calcular_tempo_atual(processo_data)
-                    
-                    col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 1])
-                    
-                    with col1:
-                        status_icon = {"parado": "🔴", "rodando": "🟢", "pausado": "🟡"}
-                        st.write(f"{status_icon[processo_data['status']]} **{processo}**")
-                        st.write(f"Tempo: {formatar_tempo(tempo_atual)}")
-                    
-                    with col2:
-                        if st.button("Play", key=f"play_{i}", disabled=(processo_data['status'] == 'rodando')):
-                            iniciar_processo(os_selecionada, processo)
-                            st.rerun()
-                    
-                    with col3:
-                        if st.button("Pause", key=f"pause_{i}", disabled=(processo_data['status'] != 'rodando')):
-                            pausar_processo(os_selecionada, processo)
-                            st.rerun()
-                    
-                    with col4:
-                        if st.button("Stop", key=f"stop_{i}", disabled=(processo_data['status'] == 'parado')):
-                            parar_processo(os_selecionada, processo)
-                            st.rerun()
-                    
-                    with col5:
-                        st.write(f"Status: {processo_data['status']}")
-                    
+                col1, col2, col3, col4 = st.columns(4)
+                with col1:
+                    st.info(f"Produto: {os_info['produto']}")
+                with col2:
+                    st.info(f"Quantidade: {os_info['quantidade']}")
+                with col3:
+                    data_criacao = datetime.fromisoformat(os_info['data_criacao'])
+                    st.info(f"Criada: {data_criacao.strftime('%d/%m/%Y')}")
+                with col4:
+                    if status_os_atual == 'finalizada':
+                        st.error("🔒 OS Finalizada")
+                    else:
+                        st.success("🟢 OS Ativa")
+                
+                # Botao de finalizar OS (apenas se ativa)
+                if status_os_atual != 'finalizada':
                     st.divider()
-            
-            # Auto-refresh
-            os_tempos = df_tempos[df_tempos['numero_os'] == os_selecionada]
-            processos_rodando = any(os_tempos['status'] == 'rodando')
-            if processos_rodando:
-                time.sleep(1)
-                st.rerun()
+                    col_finalizar1, col_finalizar2, col_finalizar3 = st.columns([1, 2, 1])
+                    with col_finalizar2:
+                        if st.button("🔒 FINALIZAR OS", 
+                                   help="Finaliza a OS e bloqueia alteracoes nos tempos",
+                                   type="secondary"):
+                            finalizar_os(os_selecionada)
+                            st.success("OS finalizada com sucesso!")
+                            st.rerun()
+                
+                st.divider()
+                
+                # Processos
+                for i, processo in enumerate(PROCESSOS):
+                    processo_mask = (df_tempos['numero_os'] == os_selecionada) & (df_tempos['processo'] == processo)
+                    
+                    if processo_mask.any():
+                        processo_data = df_tempos[processo_mask].iloc[0]
+                        tempo_atual = calcular_tempo_atual(processo_data)
+                        
+                        col1, col2, col3, col4, col5 = st.columns([3, 1, 1, 1, 1])
+                        
+                        with col1:
+                            if processo_data['status'] == 'finalizado':
+                                status_icon = "🔒"
+                                status_text = "Finalizado"
+                            else:
+                                status_icon = {"parado": "🔴", "rodando": "🟢", "pausado": "🟡"}[processo_data['status']]
+                                status_text = processo_data['status']
+                            
+                            st.write(f"{status_icon} **{processo}**")
+                            st.write(f"Tempo: {formatar_tempo(tempo_atual)}")
+                        
+                        # Botoes apenas se OS nao estiver finalizada
+                        if status_os_atual != 'finalizada' and processo_data['status'] != 'finalizado':
+                            with col2:
+                                if st.button("▶️ Play", key=f"play_{i}", 
+                                           disabled=(processo_data['status'] == 'rodando')):
+                                    iniciar_processo(os_selecionada, processo)
+                                    st.rerun()
+                            
+                            with col3:
+                                if st.button("⏸️ Pause", key=f"pause_{i}", 
+                                           disabled=(processo_data['status'] != 'rodando')):
+                                    pausar_processo(os_selecionada, processo)
+                                    st.rerun()
+                            
+                            with col4:
+                                if st.button("⏹️ Stop", key=f"stop_{i}", 
+                                           disabled=(processo_data['status'] == 'parado')):
+                                    parar_processo(os_selecionada, processo)
+                                    st.rerun()
+                        else:
+                            with col2:
+                                st.write("🔒")
+                            with col3:
+                                st.write("🔒")
+                            with col4:
+                                st.write("🔒")
+                        
+                        with col5:
+                            if processo_data['status'] == 'finalizado':
+                                st.write("🔒 Finalizado")
+                            else:
+                                st.write(f"Status: {processo_data['status']}")
+                        
+                        st.divider()
+                
+                # Auto-refresh apenas para OS ativas
+                if status_os_atual != 'finalizada':
+                    os_tempos = df_tempos[df_tempos['numero_os'] == os_selecionada]
+                    processos_rodando = any(os_tempos['status'] == 'rodando')
+                    if processos_rodando:
+                        time.sleep(1)
+                        st.rerun()
 
 elif pagina == "Relatorios":
     st.header("Relatorios")
@@ -294,16 +429,19 @@ elif pagina == "Relatorios":
         
         if os_selecionada:
             os_info = df_os[df_os['numero_os'] == os_selecionada].iloc[0]
+            status_os_atual = os_info.get('status_os', 'ativa')
             
             st.subheader(f"Relatorio: {os_selecionada}")
             
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
-                st.write(f"Produto: {os_info['produto']}")
-                st.write(f"Quantidade: {os_info['quantidade']}")
+                st.write(f"**Produto:** {os_info['produto']}")
+                st.write(f"**Quantidade:** {os_info['quantidade']}")
             with col2:
                 data_criacao = datetime.fromisoformat(os_info['data_criacao'])
-                st.write(f"Criada: {data_criacao.strftime('%d/%m/%Y')}")
+                st.write(f"**Criada:** {data_criacao.strftime('%d/%m/%Y')}")
+            with col3:
+                st.write(f"**Status:** {STATUS_OS.get(status_os_atual, status_os_atual)}")
             
             st.divider()
             st.subheader("Tempos por Processo")
@@ -321,10 +459,22 @@ elif pagina == "Relatorios":
                 with col2:
                     st.write(formatar_tempo(tempo_atual))
                 with col3:
-                    st.write(processo_data['status'])
+                    if processo_data['status'] == 'finalizado':
+                        st.write("🔒 Finalizado")
+                    else:
+                        status_display = {
+                            'parado': '🔴 Parado',
+                            'rodando': '🟢 Rodando', 
+                            'pausado': '🟡 Pausado'
+                        }
+                        st.write(status_display.get(processo_data['status'], processo_data['status']))
             
             st.divider()
-            st.subheader(f"Tempo Total: {formatar_tempo(tempo_total_os)}")
+            st.subheader(f"⏱️ **Tempo Total: {formatar_tempo(tempo_total_os)}**")
+            
+            # Resumo adicional para OS finalizadas
+            if status_os_atual == 'finalizada':
+                st.success("✅ Esta OS foi finalizada e seus tempos estao bloqueados para alteracao.")
 
 elif pagina == "Dados":
     st.header("Visualizacao dos Dados CSV")
