@@ -124,14 +124,22 @@ def salvar_os_github(df, sha):
     df.to_csv("ordens_servico.csv", index=False)
     
     if GITHUB_TOKEN:
-        st.info(f"🔄 Salvando OS no GitHub... (SHA: {sha[:8] if sha else 'novo'})")
-        result = update_file_to_github("ordens_servico.csv", content, sha, commit_msg)
-        if result:
-            st.success("✅ OS salva no GitHub com sucesso!")
-            st.json({"commit": result.get("commit", {}).get("sha", "N/A")[:8]})
-            return True
-        else:
-            st.error("❌ Erro ao salvar no GitHub - mantido backup local")
+        with st.spinner('🔄 Sincronizando com GitHub...'):
+            # Primeiro, busca o SHA mais atual
+            current_content, current_sha = get_file_from_github("ordens_servico.csv")
+            if current_sha:
+                sha = current_sha  # Usa o SHA mais atual
+            
+            result = update_file_to_github("ordens_servico.csv", content, sha, commit_msg)
+            if result:
+                st.success("✅ OS salva no GitHub com sucesso!")
+                # Atualiza o SHA no session state
+                st.session_state.sha_os = result.get("content", {}).get("sha")
+                # Força recarregamento dos dados
+                st.session_state.df_os, st.session_state.sha_os = carregar_dados_os()
+                return True
+            else:
+                st.error("❌ Erro ao salvar no GitHub - mantido backup local")
     else:
         st.warning("⚠️ GitHub Token não configurado - salvo apenas localmente")
     
@@ -146,13 +154,22 @@ def salvar_tempos_github(df, sha):
     df.to_csv("tempos_processos.csv", index=False)
     
     if GITHUB_TOKEN:
-        st.info(f"🔄 Salvando tempos no GitHub... (SHA: {sha[:8] if sha else 'novo'})")
-        result = update_file_to_github("tempos_processos.csv", content, sha, commit_msg)
-        if result:
-            st.success("✅ Tempos salvos no GitHub!")
-            return True
-        else:
-            st.error("❌ Erro ao salvar tempos no GitHub - mantido backup local")
+        with st.spinner('🔄 Sincronizando tempos com GitHub...'):
+            # Primeiro, busca o SHA mais atual
+            current_content, current_sha = get_file_from_github("tempos_processos.csv")
+            if current_sha:
+                sha = current_sha  # Usa o SHA mais atual
+            
+            result = update_file_to_github("tempos_processos.csv", content, sha, commit_msg)
+            if result:
+                st.success("✅ Tempos salvos no GitHub!")
+                # Atualiza o SHA no session state
+                st.session_state.sha_tempos = result.get("content", {}).get("sha")
+                # Força recarregamento dos dados
+                st.session_state.df_tempos, st.session_state.sha_tempos = carregar_dados_tempos()
+                return True
+            else:
+                st.error("❌ Erro ao salvar tempos no GitHub - mantido backup local")
     else:
         st.warning("⚠️ GitHub Token não configurado - salvo apenas localmente")
     
@@ -271,17 +288,35 @@ def get_tempo_atual_processo(numero_os, processo):
 # Interface principal
 st.title("⏱️ Sistema de Apontamento de Tempos de Produção")
 
-# Status do GitHub
-if GITHUB_TOKEN:
-    # Teste de conectividade
-    test_response = github_api_request("GET", "")  # Info do repositório
-    if test_response:
-        st.success(f"🌐 Conectado ao GitHub: {test_response.get('full_name', 'N/A')}")
-        st.info(f"📊 Último commit: {test_response.get('updated_at', 'N/A')}")
+# Status do GitHub com comparação
+col_status1, col_status2 = st.columns(2)
+
+with col_status1:
+    if GITHUB_TOKEN:
+        # Teste de conectividade
+        test_response = github_api_request("GET", "")  # Info do repositório
+        if test_response:
+            st.success(f"🌐 Conectado: {test_response.get('full_name', 'N/A')}")
+        else:
+            st.error("❌ Token configurado mas erro de conexão")
     else:
-        st.error("❌ Token configurado mas erro de conexão")
-else:
-    st.warning("⚠️ Modo offline - Configure GITHUB_TOKEN nos secrets para sincronizar")
+        st.warning("⚠️ Modo offline")
+
+with col_status2:
+    if GITHUB_TOKEN:
+        # Compara dados locais vs GitHub
+        github_os, _ = get_file_from_github("ordens_servico.csv")
+        if github_os:
+            try:
+                df_github = pd.read_csv(pd.StringIO(github_os))
+                if len(st.session_state.df_os) != len(df_github):
+                    st.warning(f"⚠️ Dessincronizado: Local({len(st.session_state.df_os)}) vs GitHub({len(df_github)})")
+                else:
+                    st.success(f"✅ Sincronizado: {len(st.session_state.df_os)} OS")
+            except:
+                st.info("📄 GitHub vazio ou erro na leitura")
+        else:
+            st.info("📄 Arquivo não encontrado no GitHub")
 
 # Sidebar para navegação
 st.sidebar.title("🧭 Navegação")
@@ -346,6 +381,16 @@ st.sidebar.markdown("### 📊 Status dos Dados")
 st.sidebar.write(f"📋 OS Locais: {len(st.session_state.df_os)}")
 st.sidebar.write(f"⏱️ Tempos Locais: {len(st.session_state.df_tempos)}")
 
+# Botão de sincronização forçada
+if st.sidebar.button("🔄 Forçar Sincronização"):
+    with st.sidebar:
+        with st.spinner("Sincronizando..."):
+            # Recarrega dados do GitHub
+            st.session_state.df_os, st.session_state.sha_os = carregar_dados_os()
+            st.session_state.df_tempos, st.session_state.sha_tempos = carregar_dados_tempos()
+            st.success("✅ Dados sincronizados!")
+            st.rerun()
+
 if opcao == "📋 Gerenciar Ordens de Serviço":
     st.header("📋 Gerenciar Ordens de Serviço")
     
@@ -373,14 +418,30 @@ if opcao == "📋 Gerenciar Ordens de Serviço":
                             'status_os': 'ativa'
                         }
                         
+                        # Adiciona a OS ao DataFrame local
                         st.session_state.df_os = pd.concat([st.session_state.df_os, pd.DataFrame([nova_os])], ignore_index=True)
                         
+                        # Mostra progresso
+                        progress_bar = st.progress(0)
+                        status_text = st.empty()
+                        
+                        status_text.text("💾 Salvando localmente...")
+                        progress_bar.progress(25)
+                        
                         # Salva no GitHub
-                        if salvar_os_github(st.session_state.df_os, st.session_state.sha_os):
-                            # Recarrega dados para pegar novo SHA
-                            st.session_state.df_os, st.session_state.sha_os = carregar_dados_os()
+                        status_text.text("🌐 Enviando para GitHub...")
+                        progress_bar.progress(50)
+                        
+                        sucesso_github = salvar_os_github(st.session_state.df_os, st.session_state.sha_os)
+                        progress_bar.progress(100)
+                        
+                        if sucesso_github:
+                            status_text.text("✅ Sincronizado com GitHub!")
+                        else:
+                            status_text.text("⚠️ Salvo localmente, problema no GitHub")
                         
                         st.success(f"✅ OS {numero_os} cadastrada com sucesso!")
+                        time.sleep(1)  # Pausa para mostrar o feedback
                         st.rerun()
                 else:
                     st.error("❌ Preencha todos os campos!")
