@@ -1,0 +1,6 @@
+@echo off
+echo Iniciando Sistema de Apontamento de Tempos...
+echo Aguarde, o navegador abrira automaticamente...
+echo.
+C:/Users/Rafael/AppData/Local/Programs/Python/Python313/python3.13t.exe -m streamlit run main.py --server.headless false
+pause
