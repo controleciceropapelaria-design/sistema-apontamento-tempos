@@ -21,49 +21,8 @@ GITHUB_API_BASE = f"https://api.github.com/repos/{GITHUB_REPO}"
 def github_api_request(method, endpoint, data=None, debug=False):
     """Faz requisição para GitHub API"""
     if not GITHUB_TOKEN:
-        if de                with st.container():
-                    # Teste 0: Validação básica do token
-                    st.write("**0️⃣ Testando token GitHub...**")
-                    user_response = requests.get("https://api.github.com/user", 
-                                                headers={"Authorization": f"token {GITHUB_TOKEN}"})
-                    
-                    if user_response.status_code == 200:
-                        user_data = user_response.json()
-                        st.success(f"✅ Token válido para usuário: {user_data.get('login', 'N/A')}")
-                    else:
-                        st.error(f"❌ Token inválido: Status {user_response.status_code}")
-                        st.code(user_response.text)
-                        st.stop()
-                    
-                    # Teste 1: Repositório
-                    st.write("**1️⃣ Testando acesso ao repositório...**")
-                    repo_info = github_api_request("GET", "", debug=True)
-                    if repo_info:
-                        st.success(f"✅ Conectado: {repo_info.get('full_name')}")
-                        st.info(f"📅 Último update: {repo_info.get('updated_at')}")
-                    else:
-                        st.error("❌ Erro no acesso ao repositório")
-                        
-                        # Teste alternativo: listar repositórios do usuário
-                        st.write("**🔍 Testando lista de repositórios...**")
-                        repos_response = requests.get("https://api.github.com/user/repos", 
-                                                    headers={"Authorization": f"token {GITHUB_TOKEN}"})
-                        if repos_response.status_code == 200:
-                            repos = repos_response.json()
-                            st.write(f"📋 Encontrados {len(repos)} repositórios:")
-                            for repo in repos[:5]:  # Mostra apenas os primeiros 5
-                                st.write(f"• {repo['full_name']}")
-                            
-                            # Verifica se o repositório esperado existe
-                            repo_names = [r['full_name'] for r in repos]
-                            if GITHUB_REPO not in repo_names:
-                                st.error(f"❌ Repositório '{GITHUB_REPO}' não encontrado!")
-                                st.write("**Repositórios disponíveis:**")
-                                for name in repo_names[:10]:
-                                    st.write(f"• {name}")
-                            else:
-                                st.success(f"✅ Repositório '{GITHUB_REPO}' encontrado!")
-                        st.stop()        st.error("⚠️ Token do GitHub não configurado. Usando modo offline.")
+        if debug:
+            st.error("⚠️ Token do GitHub não configurado. Usando modo offline.")
         return None
     
     headers = {
@@ -71,24 +30,17 @@ def github_api_request(method, endpoint, data=None, debug=False):
         "Accept": "application/vnd.github.v3+json"
     }
     
-    # Para endpoint vazio, usa URL base da API
-    if endpoint == "":
-        url = f"https://api.github.com/repos/{GITHUB_REPO}"
-    else:
-        url = f"{GITHUB_API_BASE}/{endpoint}"
+    url = f"{GITHUB_API_BASE}/{endpoint}"
     
     try:
-        if debug:
-            st.write(f"🔍 Tentando: {method} {url}")
-            st.write(f"🔑 Token: ...{GITHUB_TOKEN[-8:]}")
-        
         if method == "GET":
             response = requests.get(url, headers=headers)
         elif method == "PUT":
             response = requests.put(url, headers=headers, json=data)
         
+        # Log da resposta só no debug
         if debug:
-            st.write(f"� Response Status: {response.status_code}")
+            st.write(f"🔍 API {method} {endpoint}: Status {response.status_code}")
         
         if response.status_code in [200, 201]:
             return response.json()
@@ -96,21 +48,6 @@ def github_api_request(method, endpoint, data=None, debug=False):
             if debug:
                 st.error(f"❌ GitHub API Error {response.status_code}")
                 st.code(response.text)
-                
-                # Diagnósticos específicos
-                if response.status_code == 404:
-                    st.warning("🔍 **Erro 404 - Possíveis causas:**")
-                    st.write("• Token sem acesso ao repositório")
-                    st.write("• Nome do repositório incorreto")
-                    st.write("• Repositório privado sem permissões")
-                elif response.status_code == 401:
-                    st.warning("🔍 **Erro 401 - Token inválido:**")
-                    st.write("• Token expirado ou inválido")
-                    st.write("• Permissões insuficientes")
-                elif response.status_code == 403:
-                    st.warning("🔍 **Erro 403 - Sem permissão:**")
-                    st.write("• Token sem scope 'repo'")
-                    st.write("• Rate limit excedido")
             return None
     except Exception as e:
         if debug:
@@ -356,20 +293,14 @@ col_status1, col_status2 = st.columns(2)
 
 with col_status1:
     if GITHUB_TOKEN:
-        # Teste de conectividade silencioso
-        try:
-            test_response = requests.get(f"https://api.github.com/repos/{GITHUB_REPO}", 
-                                       headers={"Authorization": f"token {GITHUB_TOKEN}"}, 
-                                       timeout=5)
-            if test_response.status_code == 200:
-                repo_data = test_response.json()
-                st.success(f"🌐 Conectado: {repo_data.get('name', 'N/A')}")
-            else:
-                st.error(f"❌ Erro {test_response.status_code} - Use Debug para detalhes")
-        except:
-            st.warning("⚠️ Erro de conexão - Use Debug")
+        # Teste de conectividade
+        test_response = github_api_request("GET", "")  # Info do repositório
+        if test_response:
+            st.success(f"🌐 Conectado: {test_response.get('full_name', 'N/A')}")
+        else:
+            st.error("❌ Token configurado mas erro de conexão")
     else:
-        st.warning("⚠️ Token não configurado")
+        st.warning("⚠️ Modo offline")
 
 with col_status2:
     if GITHUB_TOKEN:
