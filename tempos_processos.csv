@@ -1,11 +1,11 @@
 numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
-1614,Aviamento de capa,0,parado,,2025-10-01T12:58:38.630606
-1614,Aviamento de miolo,0,parado,,2025-10-01T12:58:38.632480
-1614,Encadernacao e Finalizacao,0,parado,,2025-10-01T12:58:38.634282
-1614,Montagem de capa,0,parado,,2025-10-01T12:58:38.635283
-1614,Montagem de Miolo,0,parado,,2025-10-01T12:58:38.636215
-1614,Montagem do kit,0,parado,,2025-10-01T12:58:38.637137
-1581,Montagem de capa,0,em_andamento,2025-10-02T13:37:24.973767,2025-10-02T13:37:24.973767
-1569,Montagem de capa,0,em_andamento,2025-10-02T13:50:58.975769,2025-10-02T13:50:58.975769
-1568,Montagem de capa,0,em_andamento,2025-10-02T13:51:10.773451,2025-10-02T13:51:10.773451
-1571,Montagem de capa,0,em_andamento,2025-10-02T13:51:37.707636,2025-10-02T13:51:37.707636
+1614,Aviamento de capa,0.0,parado,,2025-10-01T12:58:38.630606
+1614,Aviamento de miolo,0.0,parado,,2025-10-01T12:58:38.632480
+1614,Encadernacao e Finalizacao,0.0,parado,,2025-10-01T12:58:38.634282
+1614,Montagem de capa,0.0,parado,,2025-10-01T12:58:38.635283
+1614,Montagem de Miolo,0.0,parado,,2025-10-01T12:58:38.636215
+1614,Montagem do kit,0.0,parado,,2025-10-01T12:58:38.637137
+1581,Montagem de capa,4713.122276,pausado,,2025-10-02T14:55:58.096043
+1569,Montagem de capa,0.0,em_andamento,2025-10-02T13:50:58.975769,2025-10-02T13:50:58.975769
+1568,Montagem de capa,0.0,em_andamento,2025-10-02T13:51:10.773451,2025-10-02T13:51:10.773451
+1571,Montagem de capa,0.0,em_andamento,2025-10-02T13:51:37.707636,2025-10-02T13:51:37.707636
