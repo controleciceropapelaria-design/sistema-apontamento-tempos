@@ -5,7 +5,7 @@ numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
 1614,Montagem de capa,0.0,parado,,2025-10-01T12:58:38.635283
 1614,Montagem de Miolo,0.0,parado,,2025-10-01T12:58:38.636215
 1614,Montagem do kit,0.0,parado,,2025-10-01T12:58:38.637137
-1581,Montagem de capa,12415.381822,em_andamento,2025-10-02T18:32:15.390112,2025-10-02T18:32:15.390112
+1581,Montagem de capa,14222.882854,pausado,,2025-10-02T19:02:22.891144
 1569,Montagem de capa,0.0,em_andamento,2025-10-02T13:50:58.975769,2025-10-02T13:50:58.975769
 1568,Montagem de capa,0.0,em_andamento,2025-10-02T13:51:10.773451,2025-10-02T13:51:10.773451
 1571,Montagem de capa,0.0,em_andamento,2025-10-02T13:51:37.707636,2025-10-02T13:51:37.707636
