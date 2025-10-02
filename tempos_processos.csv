@@ -10,4 +10,4 @@ numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
 1568,Montagem de capa,0.0,em_andamento,2025-10-02T13:51:10.773451,2025-10-02T13:51:10.773451
 1571,Montagem de capa,0.0,em_andamento,2025-10-02T13:51:37.707636,2025-10-02T13:51:37.707636
 1581,Aviamento de capa,2615.038086,finalizado,,2025-10-02T19:47:01.693692
-1581,Montagem de Miolo,0.0,em_andamento,2025-10-02T21:09:56.456878,2025-10-02T21:09:56.456878
+1581,Montagem de Miolo,4445.564879,pausado,,2025-10-02T22:24:02.021757
