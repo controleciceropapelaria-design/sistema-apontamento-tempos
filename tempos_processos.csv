@@ -1,7 +1,17 @@
 numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
-1614,Aviamento de capa,0,parado,,2025-10-01T12:58:38.630606
-1614,Aviamento de miolo,0,parado,,2025-10-01T12:58:38.632480
-1614,Encadernacao e Finalizacao,0,parado,,2025-10-01T12:58:38.634282
-1614,Montagem de capa,0,parado,,2025-10-01T12:58:38.635283
-1614,Montagem de Miolo,0,parado,,2025-10-01T12:58:38.636215
-1614,Montagem do kit,0,parado,,2025-10-01T12:58:38.637137
+1614,Aviamento de capa,0.0,parado,,2025-10-01T12:58:38.630606
+1614,Aviamento de miolo,0.0,parado,,2025-10-01T12:58:38.632480
+1614,Encadernacao e Finalizacao,0.0,parado,,2025-10-01T12:58:38.634282
+1614,Montagem de capa,0.0,parado,,2025-10-01T12:58:38.635283
+1614,Montagem de Miolo,0.0,parado,,2025-10-01T12:58:38.636215
+1614,Montagem do kit,0.0,parado,,2025-10-01T12:58:38.637137
+1581,Montagem de capa,19122.268176,finalizado,,2025-10-02T21:08:35.357552
+1581,Aviamento de capa,2615.038086,finalizado,,2025-10-02T19:47:01.693692
+1581,Montagem de Miolo,6367.138089,finalizado,,2025-10-03T10:29:21.909884
+1568,Encadernação e Finalização,28200.550648,finalizado,,2025-10-03T09:59:54.014848
+1569,Encadernação e Finalização,26400.413315,finalizado,,2025-10-03T13:10:07.908579
+1571,Encadernação e Finalização,45834.272855,pausado,,2025-10-03T14:09:48.654281
+1581,Encadernação e Finalização,4912.022697,finalizado,,2025-10-03T12:32:32.832743
+1578,Montagem de capa,2713.780545,pausado,,2025-10-03T13:42:16.508508
+1579,Montagem de capa,2682.061782,pausado,,2025-10-03T14:27:09.081864
+1580,Montagem de capa,1788.889715,pausado,,2025-10-03T14:57:06.682207
