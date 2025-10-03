@@ -10,7 +10,7 @@ numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
 1581,Montagem de Miolo,6367.138089,finalizado,,2025-10-03T10:29:21.909884
 1568,Encadernação e Finalização,28200.550648,finalizado,,2025-10-03T09:59:54.014848
 1569,Encadernação e Finalização,26400.413315,finalizado,,2025-10-03T13:10:07.908579
-1571,Encadernação e Finalização,41340.272855,pausado,,2025-10-03T14:09:48.654281
+1571,Encadernação e Finalização,41340.272855,em_andamento,2025-10-03T16:31:29.015819,2025-10-03T16:31:29.015819
 1581,Encadernação e Finalização,4912.022697,finalizado,,2025-10-03T12:32:32.832743
 1578,Montagem de capa,2713.780545,pausado,,2025-10-03T13:42:16.508508
 1579,Montagem de capa,2682.061782,pausado,,2025-10-03T14:27:09.081864
