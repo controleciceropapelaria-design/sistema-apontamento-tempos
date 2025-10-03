@@ -9,7 +9,7 @@ numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
 1581,Aviamento de capa,2615.038086,finalizado,,2025-10-02T19:47:01.693692
 1581,Montagem de Miolo,6367.138089,finalizado,,2025-10-03T10:29:21.909884
 1568,Encadernação e Finalização,28200.550648,finalizado,,2025-10-03T09:59:54.014848
-1569,Encadernação e Finalização,41364.751828,em_andamento,2025-10-03T16:36:48.084225,2025-10-03T16:36:48.084225
+1569,Encadernação e Finalização,44607.828532,pausado,,2025-10-03T17:30:51.160929
 1571,Encadernação e Finalização,26438.443727,finalizado,,2025-10-03T16:36:42.457681
 1581,Encadernação e Finalização,4912.022697,finalizado,,2025-10-03T12:32:32.832743
 1578,Montagem de capa,2713.780545,pausado,,2025-10-03T13:42:16.508508
