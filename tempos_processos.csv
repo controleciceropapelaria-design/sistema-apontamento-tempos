@@ -8,8 +8,8 @@ numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
 1581,Montagem de capa,19122.268176,finalizado,,2025-10-02T21:08:35.357552
 1581,Aviamento de capa,2615.038086,finalizado,,2025-10-02T19:47:01.693692
 1581,Montagem de Miolo,6367.138089,finalizado,,2025-10-03T10:29:21.909884
-1568,Encadernação e Finalização,30901.550648,finalizado,,2025-10-03T09:59:54.014848
-1569,Encadernação e Finalização,30923.413315,pausado,,2025-10-02T22:32:36.934408
+1568,Encadernação e Finalização,28200.550648,finalizado,,2025-10-03T09:59:54.014848
+1569,Encadernação e Finalização,26400.413315,pausado,,2025-10-02T22:32:36.934408
 1571,Encadernação e Finalização,30891.445605,em_andamento,2025-10-03T10:00:45.827031,2025-10-03T10:00:45.827031
 1581,Encadernação e Finalização,4912.022697,finalizado,,2025-10-03T12:32:32.832743
 1578,Montagem de capa,0.0,em_andamento,2025-10-03T12:57:02.727963,2025-10-03T12:57:02.727963
