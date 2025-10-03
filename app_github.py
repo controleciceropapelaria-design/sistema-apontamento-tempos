@@ -512,12 +512,12 @@ elif opcao == "Controle de Tempos":
     else:
         st.warning("Nenhuma OS cadastrada. Vá para 'Gerenciar Ordens de Serviço' para criar uma.")
 
-elif opcao == "📊 Relatórios":
+elif opcao == "Relatórios":
     st.header("Relatórios de Tempos")
     
     if not st.session_state.df_tempos.empty:
         # Resumo por OS
-        st.subheader("📋 Resumo por Ordem de Serviço")
+        st.subheader("Resumo por Ordem de Serviço")
         
         resumo_os = []
         for numero_os in st.session_state.df_tempos['numero_os'].unique():
@@ -526,12 +526,21 @@ elif opcao == "📊 Relatórios":
             
             # Buscar info da OS
             os_info = st.session_state.df_os[st.session_state.df_os['numero_os'] == numero_os]
-            produto = os_info['produto'].iloc[0] if not os_info.empty else "N/A"
+            if not os_info.empty:
+                produto = os_info['produto'].iloc[0]
+                quantidade = os_info['quantidade'].iloc[0]
+                tempo_por_peca = tempo_total / quantidade if quantidade > 0 else 0
+            else:
+                produto = "N/A"
+                quantidade = 0
+                tempo_por_peca = 0
             
             resumo_os.append({
                 'OS': numero_os,
                 'Produto': produto,
+                'Quantidade': quantidade,
                 'Tempo Total': formatar_tempo(tempo_total),
+                'Tempo por Peça': formatar_tempo(tempo_por_peca),
                 'Processos': len(tempos_os)
             })
         
@@ -552,15 +561,26 @@ elif opcao == "📊 Relatórios":
             ].copy()
             
             if not detalhes.empty:
+                # Buscar quantidade da OS para calcular tempo por peça
+                os_info = st.session_state.df_os[st.session_state.df_os['numero_os'] == os_selecionada_rel]
+                quantidade = os_info['quantidade'].iloc[0] if not os_info.empty else 1
+                
                 # Formatar tempo para exibição
                 detalhes['Tempo Formatado'] = detalhes['tempo_total_segundos'].apply(formatar_tempo)
+                detalhes['Tempo por Peça'] = detalhes['tempo_total_segundos'].apply(
+                    lambda x: formatar_tempo(x / quantidade if quantidade > 0 else 0)
+                )
                 
                 # Selecionar colunas para exibição
-                colunas_exibir = ['processo', 'Tempo Formatado', 'status', 'data_atualizacao']
+                colunas_exibir = ['processo', 'Tempo Formatado', 'Tempo por Peça', 'status', 'data_atualizacao']
                 detalhes_exibir = detalhes[colunas_exibir].copy()
-                detalhes_exibir.columns = ['Processo', 'Tempo Total', 'Status', 'Última Atualização']
+                detalhes_exibir.columns = ['Processo', 'Tempo Total', 'Tempo por Peça', 'Status', 'Última Atualização']
                 
                 st.dataframe(detalhes_exibir, use_container_width=True)
+                
+                # Mostrar informações da OS
+                if not os_info.empty:
+                    st.info(f"**OS {os_selecionada_rel}** - Quantidade: {quantidade} peças - Produto: {os_info['produto'].iloc[0]}")
             else:
                 st.info("Nenhum tempo registrado para esta OS ainda.")
     else:
