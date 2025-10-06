@@ -12,7 +12,7 @@ numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
 1569,Encadernação e Finalização,44607.828532,finalizado,,2025-10-03T17:32:07.156127
 1571,Encadernação e Finalização,26438.443727,finalizado,,2025-10-03T16:36:42.457681
 1581,Encadernação e Finalização,4912.022697,finalizado,,2025-10-03T12:32:32.832743
-1578,Montagem de capa,4102.911751,em_andamento,2025-10-06T10:52:44.052912,2025-10-06T10:52:44.052912
+1578,Montagem de capa,4853.965754999999,pausado,,2025-10-06T11:05:15.106916
 1579,Montagem de capa,5634.603902000001,pausado,,2025-10-03T17:55:31.188998
 1580,Montagem de capa,3388.559077,pausado,,2025-10-03T16:29:44.172528
 1583,Montagem de capa,2142.94305,pausado,,2025-10-03T17:05:49.591547
