@@ -25,4 +25,4 @@ numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
 1580,Montagem de Miolo,2787.667682,finalizado,,2025-10-07T12:42:32.399558
 1580,Encadernação e Finalização,2543.742319,pausado,,2025-10-07T12:42:28.715123
 1579,Montagem de Miolo,0.0,em_andamento,2025-10-07T14:19:08.557523,2025-10-07T14:19:08.557523
-1579,Encadernação e Finalização,1792.495166,pausado,,2025-10-07T19:26:26.591936
+1579,Encadernação e Finalização,1792.495166,finalizado,,2025-10-07T19:26:27.700025
