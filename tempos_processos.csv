@@ -21,3 +21,4 @@ numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
 1583,Aviamento de capa,939.098124,finalizado,,2025-10-06T18:14:49.235331
 1580,Aviamento de capa,1912.880479,finalizado,,2025-10-06T18:15:22.034187
 1578,Aviamento de miolo,12029.555243,pausado,,2025-10-07T00:49:34.685208
+1578,Montagem de Miolo,0.0,em_andamento,2025-10-07T10:13:16.733248,2025-10-07T10:13:16.733248
