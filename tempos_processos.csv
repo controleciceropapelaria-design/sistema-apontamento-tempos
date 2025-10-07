@@ -23,3 +23,4 @@ numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
 1578,Aviamento de miolo,12029.555243,pausado,,2025-10-07T00:49:34.685208
 1578,Montagem de Miolo,2586.067266,pausado,,2025-10-07T11:13:07.206756
 1580,Montagem de Miolo,2787.667682,pausado,,2025-10-07T12:00:02.745813
+1580,Encadernação e Finalização,0.0,em_andamento,2025-10-07T12:00:04.972804,2025-10-07T12:00:04.972804
