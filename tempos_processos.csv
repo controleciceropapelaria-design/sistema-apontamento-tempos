@@ -1,10 +1,4 @@
 numero_os,processo,tempo_total_segundos,status,inicio_atual,data_atualizacao
-1614,Aviamento de capa,0.0,parado,,2025-10-01T12:58:38.630606
-1614,Aviamento de miolo,0.0,parado,,2025-10-01T12:58:38.632480
-1614,Encadernacao e Finalizacao,0.0,parado,,2025-10-01T12:58:38.634282
-1614,Montagem de capa,0.0,parado,,2025-10-01T12:58:38.635283
-1614,Montagem de Miolo,0.0,parado,,2025-10-01T12:58:38.636215
-1614,Montagem do kit,0.0,parado,,2025-10-01T12:58:38.637137
 1581,Montagem de capa,19422.268176,finalizado,,2025-10-02T21:08:35.357552
 1581,Aviamento de capa,2615.038086,finalizado,,2025-10-02T19:47:01.693692
 1581,Montagem de Miolo,9787.138089,finalizado,,2025-10-03T10:29:21.909884
